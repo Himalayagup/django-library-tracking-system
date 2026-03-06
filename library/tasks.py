@@ -2,6 +2,7 @@ from celery import shared_task
 from .models import Loan
 from django.core.mail import send_mail
 from django.conf import settings
+from datetime import date
 
 @shared_task
 def send_loan_notification(loan_id):
@@ -17,4 +18,22 @@ def send_loan_notification(loan_id):
             fail_silently=False,
         )
     except Loan.DoesNotExist:
+        pass
+
+@shared_task
+def check_overdue_loans():
+    try:
+        today_date = date.today()
+        over_due_loans = Loan.objects.filter(is_returned=False, due_date__lt=today_date).select_related('book', 'member__user')
+        for loan in over_due_loans:
+            member_email = loan.member.user.email
+            book_title = loan.book.title
+            send_mail(
+            subject='Your Loan is overdue.',
+            message=f'Hello {loan.member.user.username},\n\nYou load "{book_title} is due.".\nPlease return it ASAP.',
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[member_email],
+            fail_silently=False,
+        )
+    except Exception as e:
         pass

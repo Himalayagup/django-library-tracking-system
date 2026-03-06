@@ -1,17 +1,20 @@
 from rest_framework import viewsets, status
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Author, Book, Member, Loan
 from .serializers import AuthorSerializer, BookSerializer, MemberSerializer, LoanSerializer
 from rest_framework.decorators import action
 from django.utils import timezone
 from .tasks import send_loan_notification
+from datetime import date, timedelta
+from django.db.models import Count
 
 class AuthorViewSet(viewsets.ModelViewSet):
     queryset = Author.objects.all()
     serializer_class = AuthorSerializer
 
 class BookViewSet(viewsets.ModelViewSet):
-    queryset = Book.objects.all()
+    queryset = Book.objects.all().select_related('author')
     serializer_class = BookSerializer
 
     @action(detail=True, methods=['post'])
@@ -52,3 +55,22 @@ class MemberViewSet(viewsets.ModelViewSet):
 class LoanViewSet(viewsets.ModelViewSet):
     queryset = Loan.objects.all()
     serializer_class = LoanSerializer
+
+    @action(detail=True, methods=['post'])
+    def extend_due_date(self, request, pk=None):
+        loan = self.get_object()
+        additional_days = int(request.data.get('additional_days', 0))
+        today_date = date.today()
+        if load.due_date < today_date:
+            return Response({'status': 'Date is overdue. Can not change the date.'}, status=status.HTTP_403_FORBIDDEN)
+        if additional_days < 0:
+            return Response({'status': 'Days should always be positive.'}, status=status.HTTP_403_FORBIDDEN)
+        loan.due_date = loan.due_date + timedelta(days=additional_days)
+        loan.save(update_fields=['due_date'])
+        return Response({'status': 'Due date extended succesfully.'}, status=status.HTTP_200_OK)
+
+class TopActiveMembers(APIView):
+
+    def get(self, request):
+        all_loans = Member.objects.filter(is_returned=False).annotate(total_loans=Count("loans")).order_by('-total_loans')[:5].values('id', 'user__username', 'total_loans')
+        return Response(all_loans, status=status.HTTP_200_OK)

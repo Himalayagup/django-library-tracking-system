@@ -61,7 +61,7 @@ class LoanViewSet(viewsets.ModelViewSet):
         loan = self.get_object()
         additional_days = int(request.data.get('additional_days', 0))
         today_date = date.today()
-        if load.due_date < today_date:
+        if loan.due_date < today_date:
             return Response({'status': 'Date is overdue. Can not change the date.'}, status=status.HTTP_403_FORBIDDEN)
         if additional_days < 0:
             return Response({'status': 'Days should always be positive.'}, status=status.HTTP_403_FORBIDDEN)
@@ -72,5 +72,5 @@ class LoanViewSet(viewsets.ModelViewSet):
 class TopActiveMembers(APIView):
 
     def get(self, request):
-        all_loans = Member.objects.filter(is_returned=False).annotate(total_loans=Count("loans")).order_by('-total_loans')[:5].values('id', 'user__username', 'total_loans')
+        all_loans = Member.objects.filter(loans__is_returned=False).annotate(total_loans=Count("loans")).order_by('-total_loans')[:5].values('id', 'user__username', 'total_loans')
         return Response(all_loans, status=status.HTTP_200_OK)

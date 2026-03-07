@@ -103,7 +103,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
-    'DEFAULT_PEGINATION_CLASS': 'rest_framework.pegination.LimitOffsetPagination',
+    'DEFAULT_PEGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'PAGE_SIZE': 10
 }
 
